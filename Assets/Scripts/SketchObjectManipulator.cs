@@ -1,9 +1,3 @@
-//-----------------------------------------------------------------------
-//
-// Für den AR-Beleg neu erstellt.
-//
-//-----------------------------------------------------------------------
-
 namespace Sketching
 {
     using UnityEngine;
@@ -39,10 +33,6 @@ namespace Sketching
         /// The line sketch object that is currently being created.
         /// </summary>
         private LineSketchObject currentLineSketchObject;
-        /// <summary>
-        /// The previously created lines
-        /// </summary>
-        private Stack<LineSketchObject> LineSketchObjects = new Stack<LineSketchObject>();
 
         /// <summary>
         /// Used to check if the touch interaction should be performed
@@ -60,6 +50,8 @@ namespace Sketching
         private bool startNewSketchObject = false;
 
         private CommandInvoker Invoker;
+
+        public SketchWorld SketchWorld;
 
         public void Start()
         {
@@ -95,7 +87,8 @@ namespace Sketching
                         else if (currentLineSketchObject)
                         {
                             //Add new control point according to current device position
-                            Invoker.ExecuteCommand(new AddControlPointContinuousCommand(currentLineSketchObject, FirstPersonCamera.transform.position + FirstPersonCamera.transform.forward * .3f));
+                            new AddControlPointContinuousCommand(currentLineSketchObject, FirstPersonCamera.transform.position + FirstPersonCamera.transform.forward * .3f)
+                                .Execute();
                         }
                     }
                     else if (currentTouch.phase == TouchPhase.Ended) {
@@ -105,15 +98,23 @@ namespace Sketching
                             Destroy(currentLineSketchObject.gameObject);
                             currentLineSketchObject = null;
                         }
-                        
+
                         //if a swipe occured and no new sketch object was created, delete the last sketch object
-                        if ((currentTouch.position - currentTouch.rawPosition).magnitude > Screen.width * 0.05
-                            && ((startNewSketchObject == false && currentLineSketchObject == null) || startNewSketchObject == true))
+                        if (((startNewSketchObject == false && currentLineSketchObject == null) || startNewSketchObject == true))
                         {
-                            DeleteLastLineSketchObject();
+                            if ((currentTouch.position - currentTouch.rawPosition).magnitude > Screen.width * 0.05) {
+                                if(Vector2.Dot(Vector2.left, (currentTouch.position - currentTouch.rawPosition)) > 0)
+                                {
+                                    DeleteLastLineSketchObject();
+                                }
+                                else if (Vector2.Dot(Vector2.right, (currentTouch.position - currentTouch.rawPosition)) > 0)
+                                {
+                                    RestoreLastDeletedSketchObject();
+                                }
+                            }
                         }
                         else {
-                            AddCurrentLineSketchObjectToStack();
+                            PostProcessSketchObject();
                         }
 
                         canStartTouchManipulation = false;
@@ -147,10 +148,11 @@ namespace Sketching
                 GameObject anchor = new GameObject();
                 anchor.name = "WorldAnchor";
                 worldAnchor = anchor.AddComponent<ARAnchor>();
+                SketchWorld.transform.SetParent(worldAnchor.transform);
             }
 
             // Instantiate sketch object as child of anchor
-            var gameObject = Instantiate(SketchObjectPrefab, worldAnchor.gameObject.transform);
+            var gameObject = Instantiate(SketchObjectPrefab);
             currentLineSketchObject = gameObject.GetComponent<LineSketchObject>();
             currentLineSketchObject.minimumControlPointDistance = .02f;
             currentLineSketchObject.SetLineDiameter(.02f);
@@ -158,27 +160,28 @@ namespace Sketching
         }
 
         /// <summary>
-        /// Saves a LineSketchObject to the stack so it can be deleted later
+        /// Refines the latest sketch object
         /// </summary>
-        private void AddCurrentLineSketchObjectToStack()
+        private void PostProcessSketchObject()
         {
             //add the current line sketch object to the stack
-            if (currentLineSketchObject != null && currentLineSketchObject.gameObject != null && !LineSketchObjects.Contains(currentLineSketchObject)) {
-                LineSketchObjects.Push(currentLineSketchObject);
+            if (currentLineSketchObject != null && currentLineSketchObject.gameObject != null) {
+                Invoker.ExecuteCommand(new AddObjectToSketchWorldRootCommand(currentLineSketchObject, SketchWorld));
                 if (currentLineSketchObject.getNumberOfControlPoints() > 2) {
                     new RefineMeshCommand(currentLineSketchObject).Execute();
                 }
             }
-
         }
 
         /// <summary>
-        /// Delete the last line sketch object from the stack.
+        /// Delete the last line sketch object using the Invoker.
         /// </summary>
         public void DeleteLastLineSketchObject() {
-            if (LineSketchObjects.Count != 0) {
-                Destroy(LineSketchObjects.Pop().gameObject);
-            }
+            Invoker.Undo();
+        }
+
+        public void RestoreLastDeletedSketchObject() {
+            Invoker.Redo();
         }
     }
 }

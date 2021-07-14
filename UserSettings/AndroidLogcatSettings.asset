@@ -3,7 +3,7 @@
     "m_SelectedPackage": {
         "deviceId": "02FAYV19JA",
         "name": "com.tterpi.Sketchar2021",
-        "processId": 31157,
+        "processId": 10704,
         "exited": false
     },
     "m_SelectedPriority": 0,
@@ -48,6 +48,24 @@
             "deviceId": "02FAYV19JA",
             "name": "com.tterpi.Sketchar2021",
             "processId": 31157,
+            "exited": false
+        },
+        {
+            "deviceId": "02FAYV19JA",
+            "name": "com.tterpi.Sketchar2021",
+            "processId": 4380,
+            "exited": false
+        },
+        {
+            "deviceId": "02FAYV19JA",
+            "name": "com.tterpi.Sketchar2021",
+            "processId": 8544,
+            "exited": false
+        },
+        {
+            "deviceId": "02FAYV19JA",
+            "name": "com.tterpi.Sketchar2021",
+            "processId": 10704,
             "exited": false
         }
     ],
